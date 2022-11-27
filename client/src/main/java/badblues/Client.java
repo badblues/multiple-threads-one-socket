@@ -1,10 +1,19 @@
 package badblues.client;
 
+import java.io.IOException;
+import java.net.Socket;
+
+
 public class Client {
     
-    public static void main(String[] args) {
-        System.out.println("Hello woradl!");
+    private static Socket socket;
 
+    public static void main(String[] args) {
+        try {
+            socket = new Socket("localhost", 4999);
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }
