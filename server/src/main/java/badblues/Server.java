@@ -5,8 +5,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
 import javafx.util.Pair;
-import java.util.concurrent.TimeUnit;
-import java.util.Random;
 import java.util.Queue;
 import java.util.LinkedList;
 import java.lang.Exception;
@@ -15,12 +13,14 @@ import java.lang.Exception;
 
 public class Server {
 
+    private static int threadNumber;
     private static ObjectInputStream oin;
     private static ObjectOutputStream oout;
     private static Queue<Pair<Integer, String>> queue = new LinkedList<>();
     private static Vector<ServerThread> threadVector = new Vector();
 
     public static void main(String[] args) {
+        threadNumber = Integer.parseInt(args[0]);
         ServerSocket serverSocket = null;
         Socket socket;
         try {
@@ -30,13 +30,12 @@ public class Server {
             System.out.println("CLient accepted!");
             oout = new ObjectOutputStream(socket.getOutputStream());
             oin = new ObjectInputStream(socket.getInputStream());
-            System.out.println("made oin, oout");
             RecieveThread recieveThread = new RecieveThread();
             SendThread sendThread = new SendThread();
             recieveThread.start();
             sendThread.start();
-            for (int i = 0; i < 10; i++) {
-                ServerThread thread = new ServerThread(i);
+            for (int i = 0; i < threadNumber; i++) {
+                ServerThread thread = new ServerThread(i, queue);
                 threadVector.add(thread);
         }
         } catch (IOException e) {
@@ -52,7 +51,6 @@ public class Server {
 
         @Override
         public void run() {
-            System.out.println("HELLO FROM RECIEVE THREAD");
             while(true) {
                 try {
                     Pair<Integer, String> pair = (Pair<Integer,String>)oin.readObject();
@@ -77,7 +75,6 @@ public class Server {
 
         @Override
         public void run() {
-            System.out.println("HELLO FROM SEND THREAD");
             while(true){
                 try {
                     synchronized(queue) {
@@ -90,51 +87,6 @@ public class Server {
                     e.printStackTrace();
                 }
             }
-        }
-    }
-
-    private static class ServerThread extends Thread {
-
-        int id;
-        Pair<Integer, String> pair;
-
-        public ServerThread(int id) {
-            this.id = id;
-        } 
-
-        @Override
-        public void run() {
-            System.out.println("HELLO FROM SERVER THREAD" + id);
-            String newWord = reverseWord(pair.getValue());
-            pair = new Pair<Integer, String>(id, newWord);
-            synchronized(queue) {
-                queue.add(pair);
-            }
-        }
-
-        private String reverseWord(String word) {
-            System.out.println("GONNA WAIT " + id);
-            try {
-                Random random = new Random();
-                TimeUnit.MILLISECONDS.sleep(random.nextInt() % 5000);
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
-            String newWord = "";
-            char ch;
-            for (int i=0; i<word.length(); i++) {
-                ch = word.charAt(i);
-                newWord = ch + newWord;
-            }
-            return newWord;
-        }
-
-        public int getThreadId() {
-            return id;
-        }
-
-        public void setPair(Pair<Integer, String> pair) {
-            this.pair = pair;
         }
     }
 
