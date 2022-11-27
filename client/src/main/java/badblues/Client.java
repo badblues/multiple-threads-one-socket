@@ -11,6 +11,8 @@ import java.lang.Exception;
 
 public class Client {
     
+    private static int counter = 0;
+    private static long startTime;
     private static int threadNumber;
     private static Socket socket;
     private static ObjectInputStream oin;
@@ -36,6 +38,7 @@ public class Client {
             thread.start();
             threadVector.add(thread);
         }
+        startTime = System.currentTimeMillis();
     }
 
     private static class RecieveThread extends Thread {
@@ -56,6 +59,10 @@ public class Client {
                            thread.unpause();
                            break;
                        }
+                   }
+                   counter++;
+                   if (counter == threadNumber) {
+                       System.out.println("Program working time: " + (System.currentTimeMillis() - startTime) + "ms");
                    }
                 } catch(Exception e) {
                     e.printStackTrace();
