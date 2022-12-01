@@ -34,7 +34,7 @@ class ClientThread extends Thread {
                 }
             }
             if (printMode) {
-                System.out.println(message);
+                System.out.println("GOT RESPONSE: " + id + "=" + message);
                 break;
             }
             generateWord(5);

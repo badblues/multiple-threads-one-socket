@@ -11,7 +11,7 @@ import java.lang.Exception;
 
 public class Client {
     
-    private static int counter = 0;
+    private static int responseCounter = 0;
     private static long startTime;
     private static int threadNumber;
     private static Socket socket;
@@ -29,61 +29,62 @@ public class Client {
         } catch(IOException e) {
             e.printStackTrace();
         }
-        RecieveThread recieveThread = new RecieveThread();
-        SendThread sendThread = new SendThread();
-        recieveThread.start();
-        sendThread.start();
-        for (int i = 0; i < threadNumber; i++) {
-            ClientThread thread = new ClientThread(i, queue);
-            thread.start();
-            threadVector.add(thread);
+        RecievingThread recievingThread = new RecievingThread();
+        SendingThread sendingThread = new SendingThread();
+        recievingThread.start();
+        sendingThread.start();
+        synchronized(threadVector) {
+            for (int i = 0; i < threadNumber; i++) {
+                ClientThread thread = new ClientThread(i, queue);
+                thread.start();
+                threadVector.add(thread);
+            }
         }
         startTime = System.currentTimeMillis();
     }
 
-    private static class RecieveThread extends Thread {
-
+    private static class RecievingThread extends Thread {
         //Поток приема ответов определяет по номеру в сообщении
         //поток, передавший запрос и пробуждает его. Ответное сообщени
         //находится в запросе, переданном потоком и выводится им
-
         @Override
         public void run() {
             while(true) {
                 try {
-                   Pair<Integer, String> pair = (Pair<Integer,String>)oin.readObject();
-                   for (ClientThread thread : threadVector) {
-                       if (thread.getThreadId() == pair.getKey()) {
-                           thread.setPrintMode(true);
-                           thread.setMessage(pair.getValue());
-                           thread.unpause();
-                           break;
-                       }
-                   }
-                   counter++;
-                   if (counter == threadNumber) {
-                       System.out.println("Program working time: " + (System.currentTimeMillis() - startTime) + "ms");
-                   }
+                    Pair<Integer, String> pair = (Pair<Integer,String>)oin.readObject();
+                    synchronized(threadVector) {
+                        for (ClientThread thread : threadVector) {
+                            if (thread.getThreadId() == pair.getKey()) {
+                                thread.setPrintMode(true);
+                                thread.setMessage(pair.getValue());
+                                thread.unpause();
+                                break;
+                            }
+                        }
+                    }
+                    responseCounter++;
+                    if (responseCounter % 1000 == 0)
+                        System.out.println(responseCounter); 
+                    if (responseCounter == threadNumber) {
+                        System.out.println("Got last message: " + (System.currentTimeMillis() - startTime) + "ms");
+                    }
                 } catch(Exception e) {
                     e.printStackTrace();
                 }
             }
         }
-
     } 
 
-    private static class SendThread extends Thread {
-
+    private static class SendingThread extends Thread {
         //Поток передачи от клиента выбирает сообщения из
         //очереди и передает в соединение
-
         @Override
         public void run() {
             while (true) {
-               try {
+                try {
                     synchronized(queue) {
                         if (!queue.isEmpty()) {
-                            System.out.println("message: " + queue.peek());
+                            System.out.println("SENT REQUEST: " + queue.peek());
                             oout.writeObject(queue.poll());
                         }
                     }

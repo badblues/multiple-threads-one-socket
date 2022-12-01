@@ -11,12 +11,16 @@ import java.lang.Exception;
  class ServerThread extends Thread {
 
     Queue<Pair<Integer, String>> queue;
+    int lower_gap = 0;
+    int higher_gap = 0;
     int id;
     Pair<Integer, String> pair;
 
-    public ServerThread(int id, Queue<Pair<Integer, String>> queue) {
-        this.queue = queue;
+    public ServerThread(int id, Queue<Pair<Integer, String>> queue, int low, int high) {
         this.id = id;
+        this.queue = queue;
+        this.lower_gap = low;
+        this.higher_gap = high;
     } 
 
     @Override
@@ -32,7 +36,7 @@ import java.lang.Exception;
     private String reverseWord(String word) {
         try {
             Random random = new Random();
-            TimeUnit.MILLISECONDS.sleep(random.nextInt() % 5000);
+            TimeUnit.MILLISECONDS.sleep(random.nextInt() % (higher_gap - lower_gap) + lower_gap);
         } catch(Exception e) {
             e.printStackTrace();
         }

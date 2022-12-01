@@ -9,8 +9,6 @@ import java.util.Queue;
 import java.util.LinkedList;
 import java.lang.Exception;
 
-//TODO: solve dependency with javafx.controls
-
 public class Server {
 
     private static int threadNumber;
@@ -21,6 +19,8 @@ public class Server {
 
     public static void main(String[] args) {
         threadNumber = Integer.parseInt(args[0]);
+        int lower_gap = Integer.parseInt(args[1]);
+        int higher_gap = Integer.parseInt(args[2]);
         ServerSocket serverSocket = null;
         Socket socket;
         try {
@@ -30,20 +30,22 @@ public class Server {
             System.out.println("CLient accepted!");
             oout = new ObjectOutputStream(socket.getOutputStream());
             oin = new ObjectInputStream(socket.getInputStream());
-            RecieveThread recieveThread = new RecieveThread();
-            SendThread sendThread = new SendThread();
-            recieveThread.start();
-            sendThread.start();
-            for (int i = 0; i < threadNumber; i++) {
-                ServerThread thread = new ServerThread(i, queue);
-                threadVector.add(thread);
-        }
+            RecievingThread recievingThread = new RecievingThread();
+            SendingThread sendingThread = new SendingThread();
+            recievingThread.start();
+            sendingThread.start();
+            synchronized(threadVector) {
+                for (int i = 0; i < threadNumber; i++) {
+                    ServerThread thread = new ServerThread(i, queue, lower_gap, higher_gap);
+                    threadVector.add(thread);
+                }  
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static class RecieveThread extends Thread {
+    private static class RecievingThread extends Thread {
 
         //поток приема на сервере, приняв очередное сообщение, запускает поток
         //исполнения запроса, по завершении которого в очередь ответов ставить ответ
@@ -54,22 +56,24 @@ public class Server {
             while(true) {
                 try {
                     Pair<Integer, String> pair = (Pair<Integer,String>)oin.readObject();
-                    for (ServerThread thread : threadVector) {
-                       if (thread.getThreadId() == pair.getKey()) {
-                           thread.setPair(pair);
-                           thread.start();
-                           break;
-                       }
-                   }
+                    synchronized(threadVector) {
+                        for (ServerThread thread : threadVector) {
+                            if (thread.getThreadId() == pair.getKey()) {
+                                thread.setPair(pair);
+                                thread.start();
+                                break;
+                            }
+                        }
+                    }
                 } catch(Exception e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
         }
 
     } 
 
-    private static class SendThread extends Thread {
+    private static class SendingThread extends Thread {
 
         //поток передачи ответов на сервере выбирает сообщения из очереди и передает в соединение
 
@@ -79,12 +83,12 @@ public class Server {
                 try {
                     synchronized(queue) {
                         if (!queue.isEmpty()) {
-                            System.out.println("message: " + queue.peek());
+                            System.out.println("SENT RESPONSE: " + queue.peek());
                             oout.writeObject(queue.poll());
                         }
                     }
                 } catch(IOException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
         }
