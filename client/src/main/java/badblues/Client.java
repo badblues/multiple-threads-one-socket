@@ -3,22 +3,27 @@ package badblues.client;
 import java.io.*;
 import java.net.Socket;
 import java.util.Queue;
+import java.util.HashMap;
 import java.util.Vector;
 import java.util.LinkedList;
 import javafx.util.Pair;
 import java.lang.Exception;
 
 
+/* TODO:
+    (время задержки сообщения складывается из: время передачи х2 + время обслуживания на сервере)
+    -Измерить трудоемкость, построить графики (должен показывать зависимость увеличения времени ответа)
+ */
 public class Client {
     
     private static int responseCounter = 0;
-    private static long startTime;
     private static int threadNumber;
     private static Socket socket;
     private static ObjectInputStream oin;
     private static ObjectOutputStream oout;
-    private static Vector<ClientThread> threadVector = new Vector();
+    private static HashMap<Integer, ClientThread> threads = new HashMap<>();
     private static Queue<Pair<Integer, String>> queue = new LinkedList<>();
+    private static Vector<Long> performance = new Vector<>();
 
     public static void main(String[] args) {
         threadNumber = Integer.parseInt(args[0]);
@@ -33,14 +38,13 @@ public class Client {
         SendingThread sendingThread = new SendingThread();
         recievingThread.start();
         sendingThread.start();
-        synchronized(threadVector) {
+        synchronized(threads) {
             for (int i = 0; i < threadNumber; i++) {
-                ClientThread thread = new ClientThread(i, queue);
+                ClientThread thread = new ClientThread(i, queue, performance);
                 thread.start();
-                threadVector.add(thread);
+                threads.put(i, thread);
             }
         }
-        startTime = System.currentTimeMillis();
     }
 
     private static class RecievingThread extends Thread {
@@ -52,21 +56,21 @@ public class Client {
             while(true) {
                 try {
                     Pair<Integer, String> pair = (Pair<Integer,String>)oin.readObject();
-                    synchronized(threadVector) {
-                        for (ClientThread thread : threadVector) {
-                            if (thread.getThreadId() == pair.getKey()) {
-                                thread.setPrintMode(true);
-                                thread.setMessage(pair.getValue());
-                                thread.unpause();
-                                break;
-                            }
-                        }
+                    synchronized(threads) {
+                        ClientThread thread = threads.get(pair.getKey());
+                        thread.setPrintMode(true);
+                        thread.setMessage(pair.getValue());
+                        thread.unpause();
                     }
                     responseCounter++;
-                    if (responseCounter % 1000 == 0)
-                        System.out.println(responseCounter); 
                     if (responseCounter == threadNumber) {
-                        System.out.println("Got last message: " + (System.currentTimeMillis() - startTime) + "ms");
+                        synchronized(performance){
+                            double sum = 0;
+                            for (Long n : performance)
+                                sum += (double)n;
+                            sum /= (double)performance.size();
+                            System.out.println("AVERAGE TIME: " + sum + "ms");
+                        }
                     }
                 } catch(Exception e) {
                     e.printStackTrace();

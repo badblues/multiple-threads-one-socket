@@ -3,7 +3,7 @@ package badblues.server;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Vector;
+import java.util.HashMap;
 import javafx.util.Pair;
 import java.util.Queue;
 import java.util.LinkedList;
@@ -15,7 +15,7 @@ public class Server {
     private static ObjectInputStream oin;
     private static ObjectOutputStream oout;
     private static Queue<Pair<Integer, String>> queue = new LinkedList<>();
-    private static Vector<ServerThread> threadVector = new Vector();
+    private static HashMap<Integer, ServerThread> threads = new HashMap<>();
 
     public static void main(String[] args) {
         threadNumber = Integer.parseInt(args[0]);
@@ -34,10 +34,10 @@ public class Server {
             SendingThread sendingThread = new SendingThread();
             recievingThread.start();
             sendingThread.start();
-            synchronized(threadVector) {
+            synchronized(threads) {
                 for (int i = 0; i < threadNumber; i++) {
                     ServerThread thread = new ServerThread(i, queue, lower_gap, higher_gap);
-                    threadVector.add(thread);
+                    threads.put(i, thread);
                 }  
             }
         } catch (IOException e) {
@@ -56,14 +56,10 @@ public class Server {
             while(true) {
                 try {
                     Pair<Integer, String> pair = (Pair<Integer,String>)oin.readObject();
-                    synchronized(threadVector) {
-                        for (ServerThread thread : threadVector) {
-                            if (thread.getThreadId() == pair.getKey()) {
-                                thread.setPair(pair);
-                                thread.start();
-                                break;
-                            }
-                        }
+                    synchronized(threads) {
+                        ServerThread thread = threads.get(pair.getKey());
+                        thread.setPair(pair);
+                        thread.start();
                     }
                 } catch(Exception e) {
                     //e.printStackTrace();

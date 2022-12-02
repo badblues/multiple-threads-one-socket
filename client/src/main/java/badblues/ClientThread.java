@@ -11,13 +11,16 @@ class ClientThread extends Thread {
     String message;
     boolean printMode = false;
     Queue<Pair<Integer, String>> queue;
+    Vector<Long> performance;
+    long startTime;
 
     protected volatile boolean paused = false;
     protected final Object pauseLock = new Object();
 
-    public ClientThread(int id, Queue<Pair<Integer, String>> queue) {
-        this.queue = queue;
+    public ClientThread(int id, Queue<Pair<Integer, String>> queue, Vector<Long> performance) {
         this.id = id;
+        this.queue = queue;
+        this.performance = performance;
     }
 
     @Override
@@ -35,6 +38,9 @@ class ClientThread extends Thread {
             }
             if (printMode) {
                 System.out.println("GOT RESPONSE: " + id + "=" + message);
+                synchronized(performance) {
+                    performance.add(System.currentTimeMillis() - startTime);
+                }
                 break;
             }
             generateWord(5);
@@ -42,6 +48,7 @@ class ClientThread extends Thread {
             synchronized(queue) {
                 queue.add(pair);
             }
+            startTime = System.currentTimeMillis();
             pause();
         }
     }
