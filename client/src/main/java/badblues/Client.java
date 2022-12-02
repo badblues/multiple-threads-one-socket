@@ -10,10 +10,7 @@ import javafx.util.Pair;
 import java.lang.Exception;
 
 
-/* TODO:
-    (время задержки сообщения складывается из: время передачи х2 + время обслуживания на сервере)
-    -Измерить трудоемкость, построить графики (должен показывать зависимость увеличения времени ответа)
- */
+
 public class Client {
     
     private static int responseCounter = 0;
